@@ -48,12 +48,14 @@ find_package(catkin REQUIRED COMPONENTS
 add_message_files(
    FILES
    Complex.msg
+   Num.msg
 )
 
 ## Generate services in the 'srv' folder
 add_service_files(
    FILES
    WordCountType.srv
+   AddTwoInts.srv
 )
 
 ## Generate actions in the 'action' folder
