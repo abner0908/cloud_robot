@@ -2,7 +2,9 @@ import socket
 
 def get_hostname():
     hostname = socket.gethostname()
-    return  hostname.split('-')[0] + "_" + hostname.split('-')[1]
+    if hostname.split('-') > 1:
+        hostname = hostname.split('-')[0] + "_" + hostname.split('-')[1]
+    return  hostname
 
 def get_ip_address():
     s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
