@@ -3,9 +3,10 @@
 import sys
 import rospy
 import random
+import time
 from cloud_robot.srv import *
 
-def generate_rand_nums(max):
+def create_rand_nums(max):
     nums = range(1, max + 1)
     random.shuffle(nums)
     return nums
@@ -23,15 +24,22 @@ def suggest_info():
     return "%s [max: maxium random integer range]"%sys.argv[0]
 
 if __name__ == "__main__":
+
     if len(sys.argv) == 2:
         max = int(sys.argv[1])
     else:
         print suggest_info()
         sys.exit(1)
-    print "generating random integer numbers(from 1 to %s)" %max
-    nums = generate_rand_nums(max)
+
+    print "generating a series of random integer numbers(from 1 to %s)" %max
+    rands = create_rand_nums(max)
+
     print "before sorting...."
-    print nums
+    print rands
+
+    start_time = time.time()
     print "after sorting...."
-    sorted = sorting_by_server(nums)
-    print sorted
+    sorteds = sorting_by_server(rands)
+    end_time = time.time()
+    print sorteds
+    print "spending %0.4f sec to sort by server" % (end_time - start_time)

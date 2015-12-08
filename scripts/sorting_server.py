@@ -4,7 +4,7 @@ from cloud_robot.srv import *
 import rospy
 
 def handle_sorting(req):
-    print "get size %s a series of random integers and return the sorted list"%len(req.nums)
+    print "get a size %s's random integers and return the sorted list"%len(req.nums)
     sorted = sorting(req.nums)
     return SortingIntsResponse(sorted)
 
@@ -14,7 +14,7 @@ def sorting(nums):
 def sorting_server():
     rospy.init_node('sorting_server')
     s = rospy.Service('sorting_ints', SortingInts, handle_sorting)
-    print "Ready to sort random integers..."
+    print "Ready to sort a series of random integers..."
     rospy.spin()
 
 if __name__ == "__main__":
