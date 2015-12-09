@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 import rospy, roslib
 import cv2
-import os.path
+import os.path, sys
 from std_msgs.msg import String
 from sensor_msgs.msg import Image
 from cv_bridge import CvBridge, CvBridgeError
