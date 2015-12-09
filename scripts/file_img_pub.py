@@ -11,7 +11,7 @@ def handle_pub(im_path):
     pub = rospy.Publisher('/file/image', Image, queue_size = 2)
     bridge = CvBridge()
     
-    rate = rospy.Rate(2)
+    rate = rospy.Rate(1)
     while not rospy.is_shutdown():
         try:
             im = read_image(im_path)
@@ -21,14 +21,16 @@ def handle_pub(im_path):
             print(e)
         rate.sleep()  
 
+    cv2.destroyAllWindows()
+
 def read_image(im_path):
     #cv2.IMREAD_COLOR, cv2.IMREAD_GRAYSCALE , cv2.IMREAD_UNCHANGED
     #Instead of these three flags, you can simply pass integers 1, 0 or -1 respectively.
     im = cv2.imread(im_path, 1)
 
     cv2.imshow('map image', im)
-    cv2.waitKey(0)
-    cv2.destroyAllWindows()
+    cv2.waitKey(3)
+    #cv2.destroyAllWindows()
     return im
 
 if __name__ == '__main__':
@@ -41,5 +43,6 @@ if __name__ == '__main__':
         read_image(path)
     else:
         print path, 'do not exist!!'
-
+    
+    cv2.namedWindow("map image", 1)
     handle_pub(path)        
