@@ -29,7 +29,7 @@ from sensor_msgs.msg import CompressedImage
 # We do not use cv_bridge it does not support CompressedImage in python
 # from cv_bridge import CvBridge, CvBridgeError
 
-VERBOSE = False
+VERBOSE = 1
 
 class image_feature:
 
@@ -77,8 +77,8 @@ class image_feature:
             x,y = featpoint.pt
             cv2.circle(image_np,(int(x),int(y)), 3, (0,0,255), -1)
         
-        cv2.imshow('cv_img', image_np)
-        cv2.waitKey(2)
+        #cv2.imshow('cv_img', image_np)
+        #cv2.waitKey(2)
 
         #### Create CompressedIamge ####
         msg = CompressedImage()
