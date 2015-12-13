@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 
 import cv2
-import os.path
+import os.path, sys
 import numpy as np
 
 im_path = '/home/abner0908/catkin_ws/map.jpg'
@@ -14,6 +14,9 @@ if not os.path.exists(im_path):
 #Instead of these three flags, you can simply pass integers 1, 0 or -1 respectively.
 im = cv2.imread(im_path, 1)
 
-cv2.imshow('map image', im)
-cv2.waitKey(0)
-cv2.destroyAllWindows()
+if (im == None):
+    print "Could not open or find the image"
+else:
+    cv2.imshow('map image', im)
+    cv2.waitKey(0)
+    cv2.destroyAllWindows()

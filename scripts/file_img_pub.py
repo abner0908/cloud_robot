@@ -1,8 +1,7 @@
 #!/usr/bin/env python
 import rospy, roslib
 import cv2
-import os.path, sys
-from std_msgs.msg import String
+import os.path, sys, time, datetime
 from sensor_msgs.msg import Image
 from cv_bridge import CvBridge, CvBridgeError
 
@@ -27,13 +26,16 @@ def read_image(im_path):
     #cv2.IMREAD_COLOR, cv2.IMREAD_GRAYSCALE , cv2.IMREAD_UNCHANGED
     #Instead of these three flags, you can simply pass integers 1, 0 or -1 respectively.
     im = cv2.imread(im_path, 1)
-
+    now = time.time()
+    now_str = datetime.datetime.fromtimestamp(now).strftime('%Y-%m-%d %H:%M:%S')
+    cv2.putText(im, now_str, (0,20), cv2.FONT_ITALIC, 0.7, 1)
     cv2.imshow('map image', im)
     cv2.waitKey(3)
     #cv2.destroyAllWindows()
     return im
 
 if __name__ == '__main__':
+
     if len(sys.argv) == 2:
         path = sys.argv[1]
     else:
@@ -43,6 +45,8 @@ if __name__ == '__main__':
         read_image(path)
     else:
         print path, 'do not exist!!'
+        exit(0)
     
     cv2.namedWindow("map image", 1)
-    handle_pub(path)        
+    handle_pub(path)
+
