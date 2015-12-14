@@ -35,7 +35,6 @@ def detect_people(img, hog):
 
 def handle_sub(topic):
     rospy.init_node('people_detection', anonymous=True)
-    cv2.namedWindow("people detection", 1)
     sub = rospy.Subscriber(topic, Image, callback)
     try:
         rospy.spin()
@@ -45,8 +44,8 @@ def handle_sub(topic):
     cv2.destroyAllWindows()
 
 def callback(data):
+    bridge = CvBridge()
     try:
-        bridge = CvBridge()
         cv_img = bridge.imgmsg_to_cv2(data, "bgr8")
     except CvBridgeError as e:
         print(e)
@@ -57,22 +56,48 @@ def callback(data):
     time_start = clock()
         
     detect_people(cv_img, hog)
-       
+
     time_span = clock() - time_start
     if time_span == 0:
         fps = 0
     else:
         fps = 1 / time_span
+    draw_str(cv_img, (5,30), 'fps: %d' % fps)
 
-    draw_str(cv_img, (5,30), 'fps: %d' % fps)    
-    cv2.imshow('people detection', cv_img)
-    cv2.waitKey(1)
+    if show_video == True:    
+        cv2.imshow('people detection', cv_img)
+        cv2.waitKey(1)
+
+    pub = rospy.Publisher("/opencv/detect/people",Image, queue_size = 1)
+    try:
+      pub.publish(bridge.cv2_to_imgmsg(cv_img, "bgr8"))
+    except CvBridgeError as e:
+      print(e)    
 # ....
 
+show_video = False
+help_msg = "cv_detect_people.py [-w (show video)] [-t <topic_name>]"
+
 if __name__ == '__main__':
-    if len(sys.argv) != 2:
-        print 'python read_video.py <topic>'
+    try:
+        opts, args = getopt.getopt(sys.argv[1:], 'wt:', '')
+    except getopt.GetoptError as err:
+        print str(err)
+        print help_msg
         exit(1)
 
-    topic = sys.argv[1]  
+    if len(opts) == 0:
+        print help_msg
+        exit(1)
+
+    topic = ""
+    for key, value in opts:
+        if key == '-w':
+            show_video = True
+        elif key == '-t':
+            topic = value            
+        else:
+            print help_msg
+            exit(1)    
+ 
     handle_sub(topic)

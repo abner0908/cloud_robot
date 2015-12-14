@@ -60,17 +60,24 @@ if __name__ == '__main__':
         print help_msg
         exit(1)
 
+    if len(opts) == 0:
+        print help_msg
+        exit(1)
+
+    path = ""
     for key, value in opts:
         if key == '-w':
             show_video = True
         elif key == '-p':
-            path = value
+            path = value            
         else:
-            print help_msg    
+            print help_msg
+            exit(1)    
 
     if not os.path.isfile(path):
         print '[%s] do not exist!!' % path
+        print help_msg
         exit(1)
     
-    cv2.namedWindow("play video", 1)
+    #cv2.namedWindow("play video", 1)
     handle_pub(path)
