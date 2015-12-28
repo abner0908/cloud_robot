@@ -16,10 +16,10 @@ FPS = 30
 
 def handle_pub(video_path):
     topic = '/camera/video'
-    rospy.init_node('video_publisher')
+    rospy.init_node('camera_publisher')
     pub = rospy.Publisher(topic, Image, queue_size=2)
 
-    print "\npublish video to topic:%s from file:%s ..." % (topic, video_path)
+    print "publish camera to topic:%s from camera ..." % (topic)
     videoCapture = cv2.VideoCapture(0)
     bridge = CvBridge()
 
@@ -65,16 +65,9 @@ if __name__ == '__main__':
         print help_msg
         exit(1)
 
-    if len(opts) == 0:
-        print help_msg
-        exit(1)
-
     path = ""
     for key, value in opts:
         if key == '-w':
             show_video = True
-        else:
-            print help_msg
-            exit(1)
 
     handle_pub(path)
