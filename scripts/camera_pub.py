@@ -15,15 +15,15 @@ FPS = 30
 
 
 def handle_pub(video_path):
-    topic = '/file/video'
+    topic = '/camera/video'
     rospy.init_node('video_publisher')
     pub = rospy.Publisher(topic, Image, queue_size=2)
 
     print "\npublish video to topic:%s from file:%s ..." % (topic, video_path)
-    videoCapture = cv2.VideoCapture(video_path)
+    videoCapture = cv2.VideoCapture(0)
     bridge = CvBridge()
 
-    rate = rospy.Rate(FPS)
+    #rate = rospy.Rate(FPS)
     time_start = clock()
     frame_count = 0
     success, img = videoCapture.read()
@@ -47,7 +47,7 @@ def handle_pub(video_path):
             if 0xFF & cv2.waitKey(1) == KEY_ECS:
                 break
 
-        rate.sleep()
+        #rate.sleep()
         success, img = videoCapture.read()
         frame_count += 1
 
@@ -55,11 +55,11 @@ def handle_pub(video_path):
 # ....
 
 show_video = False
-help_msg = "file_vido_pub.py [-w (show video)] [-p <video_path>] [-r <frame_per_seconds>]"
+help_msg = "file_vido_pub.py [-w (show video)]"
 
 if __name__ == '__main__':
     try:
-        opts, args = getopt.getopt(sys.argv[1:], 'wp:r:', '')
+        opts, args = getopt.getopt(sys.argv[1:], 'w', '')
     except getopt.GetoptError as err:
         print str(err)
         print help_msg
@@ -73,18 +73,8 @@ if __name__ == '__main__':
     for key, value in opts:
         if key == '-w':
             show_video = True
-        elif key == '-p':
-            path = value
-        elif key == '-r':
-            FPS = int(value)
         else:
             print help_msg
             exit(1)
 
-    if not os.path.isfile(path):
-        print '[%s] do not exist!!' % path
-        print help_msg
-        exit(1)
-
-    #cv2.namedWindow("play video", 1)
     handle_pub(path)
