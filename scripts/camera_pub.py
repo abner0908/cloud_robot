@@ -14,16 +14,15 @@ KEY_ECS = 27
 FPS = 30
 
 
-def handle_pub(video_path):
+def handle_pub(device_num):
     topic = '/camera/video'
+    print "publish video to topic:%s from camera ..." % (topic)
     rospy.init_node('camera_publisher')
     pub = rospy.Publisher(topic, Image, queue_size=2)
 
-    print "publish camera to topic:%s from camera ..." % (topic)
-    videoCapture = cv2.VideoCapture(0)
+    videoCapture = cv2.VideoCapture(device_num)
     bridge = CvBridge()
 
-    #rate = rospy.Rate(FPS)
     time_start = clock()
     frame_count = 0
     success, img = videoCapture.read()
@@ -47,7 +46,7 @@ def handle_pub(video_path):
             if 0xFF & cv2.waitKey(1) == KEY_ECS:
                 break
 
-        #rate.sleep()
+        # rate.sleep()
         success, img = videoCapture.read()
         frame_count += 1
 
@@ -55,19 +54,24 @@ def handle_pub(video_path):
 # ....
 
 show_video = False
-help_msg = "file_vido_pub.py [-w (show video)]"
+help_msg = "camera_pub.py [-w (show video)]"
 
 if __name__ == '__main__':
     try:
-        opts, args = getopt.getopt(sys.argv[1:], 'w', '')
+        opts, args = getopt.getopt(sys.argv[1:], 'wd:', '')
     except getopt.GetoptError as err:
         print str(err)
         print help_msg
         exit(1)
 
-    path = ""
+    device_num = 0
     for key, value in opts:
         if key == '-w':
             show_video = True
+        elif key == '-d':
+            device_num = int(value)
+        else:
+            print help_msg
+            exit(1)
 
-    handle_pub(path)
+    handle_pub(device_num)
