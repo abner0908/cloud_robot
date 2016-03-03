@@ -4,6 +4,7 @@ import roslib
 import cv2
 import os.path
 import sys
+import time
 import getopt
 from std_msgs.msg import String
 from sensor_msgs.msg import Image
@@ -16,7 +17,7 @@ FPS = 30
 
 def handle_pub(videoCapture):
     topic = '/camera/video'
-    dashes = '_' * 40
+    dashes = '_' * 60
     print dashes
     print "publish video to topic:%s from camera ..." % (topic)
     print dashes
@@ -47,6 +48,7 @@ def handle_pub(videoCapture):
             cv2.imshow('play video', img_copy)
             if 0xFF & cv2.waitKey(1) == KEY_ECS:
                 break
+        time.sleep(.05)        
 
         # rate.sleep()
         success, img = videoCapture.read()
