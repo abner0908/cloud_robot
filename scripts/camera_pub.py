@@ -14,13 +14,15 @@ KEY_ECS = 27
 FPS = 30
 
 
-def handle_pub(device_num):
+def handle_pub(videoCapture):
     topic = '/camera/video'
+    dashes = '_' * 40
+    print dashes
     print "publish video to topic:%s from camera ..." % (topic)
+    print dashes
     rospy.init_node('camera_publisher')
     pub = rospy.Publisher(topic, Image, queue_size=2)
 
-    videoCapture = cv2.VideoCapture(device_num)
     bridge = CvBridge()
 
     time_start = clock()
@@ -54,7 +56,7 @@ def handle_pub(device_num):
 # ....
 
 show_video = False
-help_msg = "camera_pub.py [-w (show video)]"
+help_msg = "camera_pub.py [-w (show video)][-d <device number>]"
 
 if __name__ == '__main__':
     try:
@@ -74,4 +76,10 @@ if __name__ == '__main__':
             print help_msg
             exit(1)
 
-    handle_pub(device_num)
+    videoCapture = cv2.VideoCapture(device_num)
+    try:
+        handle_pub(videoCapture)
+    except Exception as e:
+        print 'Error occured! error message: %s' % (e)
+    finally:
+        videoCapture.release()
