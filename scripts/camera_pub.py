@@ -4,6 +4,7 @@ import roslib
 import cv2
 import os.path
 import sys
+import time
 import getopt
 from std_msgs.msg import String
 from sensor_msgs.msg import Image
@@ -54,6 +55,7 @@ def handle_pub(videoCapture):
             cv2.imshow('play video', img_copy)
             if 0xFF & cv2.waitKey(1) == KEY_ECS:
                 break
+        time.sleep(.05)        
 
         # rate.sleep()
         success, img = videoCapture.read()
