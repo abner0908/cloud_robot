@@ -14,23 +14,31 @@ KEY_ECS = 27
 FPS = 30
 
 
-def handle_pub(video_path):
+def handle_pub(videoCapture):
     topic = '/camera/video'
+    dashes = '_' * 60
+    print dashes
+    print "publish video to topic:%s from camera ..." % (topic)
+    print dashes
     rospy.init_node('camera_publisher')
     pub = rospy.Publisher(topic, Image, queue_size=2)
 
-    print "publish camera to topic:%s from camera ..." % (topic)
-    videoCapture = cv2.VideoCapture(0)
     bridge = CvBridge()
 
-    #rate = rospy.Rate(FPS)
     time_start = clock()
     frame_count = 0
     success, img = videoCapture.read()
+    count = 0
     while success:
         img_copy = img.copy()
         try:
             msg = bridge.cv2_to_imgmsg(img, "bgr8")
+            now = rospy.Time.now()
+            count += 1
+            msg.header.frame_id = 'ros-lab_' + str(count)
+            msg.header.stamp.secs = now.secs
+            msg.header.stamp.nsecs = now.nsecs
+            print msg.header
         except CvBridgeError as e:
             print(e)
 
@@ -47,27 +55,39 @@ def handle_pub(video_path):
             if 0xFF & cv2.waitKey(1) == KEY_ECS:
                 break
 
-        #rate.sleep()
+        # rate.sleep()
         success, img = videoCapture.read()
         frame_count += 1
-
+    # end wile
     cv2.destroyAllWindows()
+
 # ....
 
 show_video = False
-help_msg = "file_vido_pub.py [-w (show video)]"
+help_msg = "camera_pub.py [-w (show video)][-d <device number>]"
 
 if __name__ == '__main__':
     try:
-        opts, args = getopt.getopt(sys.argv[1:], 'w', '')
+        opts, args = getopt.getopt(sys.argv[1:], 'wd:', '')
     except getopt.GetoptError as err:
         print str(err)
         print help_msg
         exit(1)
 
-    path = ""
+    device_num = 0
     for key, value in opts:
         if key == '-w':
             show_video = True
+        elif key == '-d':
+            device_num = int(value)
+        else:
+            print help_msg
+            exit(1)
 
-    handle_pub(path)
+    videoCapture = cv2.VideoCapture(device_num)
+    try:
+        handle_pub(videoCapture)
+    except Exception as e:
+        print 'Error occured! error message: %s' % (e)
+    finally:
+        videoCapture.release()
