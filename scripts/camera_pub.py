@@ -15,10 +15,6 @@ FPS = 30
 show_video = False
 
 
-class ExitLoop(Exception):
-    pass
-
-
 def handle_pub(videoCapture):
     topic = '/camera/video'
     dashes = '_' * 60
@@ -62,7 +58,7 @@ def handle_pub(videoCapture):
 
 
 def add_timestamp(msg, count):
-    from utility import get_hostname
+    from utility import get_hostname, ExitLoop
     now = rospy.Time.now()
     msg.header.frame_id = get_hostname() + '_' + str(count)
     msg.header.stamp.secs = now.secs
