@@ -1,32 +1,50 @@
 #!/usr/bin/env python
 
-import rospy, roslib
+import rospy
+import roslib
 import cv2
 import sys
 from sensor_msgs.msg import Image
 from cv_bridge import CvBridge, CvBridgeError
+from utility import get_hostname, ExitLoop
 
 
-def handle_sub(topic):
-    rospy.init_node('image_subscriber', anonymous=True)
-    cv2.namedWindow("map image", 1)
-    sub = rospy.Subscriber(topic, Image, callback)
-    try:
-        rospy.spin()
-    except KeyboardInterrupt:
-        print("Shutting down")
+class ImgSub:
 
-    cv2.destroyAllWindows()
+    def __init__(self, topic):
+        self.topic = topic
+        self.KEY_ECS = 27
+        self.bridge = CvBridge()
+        rospy.on_shutdown(self.cleanup)
+        self.shutdowm_msg = "Shutting down."
 
-def callback(data):
-    try:
-        bridge = CvBridge()
-        cv_image = bridge.imgmsg_to_cv2(data, "bgr8")
-    except CvBridgeError as e:
-        print(e)
+    def handle_sub(self):
+        rospy.init_node('image_subscriber', anonymous=True)
+        #cv2.namedWindow("map image", 1)
 
-    cv2.imshow("map image", cv_image)
-    cv2.waitKey(3)
+        self.sub = rospy.Subscriber(self.topic, Image, self.callback)
+
+        try:
+            rospy.spin()
+        except KeyboardInterrupt:
+            print(self.shutdowm_msg)
+            cv2.destroyAllWindows()
+
+    def callback(self, data):
+
+        try:
+            print data.header
+            cv_image = self.bridge.imgmsg_to_cv2(data, "bgr8")
+        except CvBridgeError as e:
+            print(e)
+
+        cv2.imshow("map image", cv_image)
+        if 0xFF & cv2.waitKey(1) == self.KEY_ECS:
+            rospy.signal_shutdown("User hit q key to quit.")
+
+    def cleanup(self):
+        print self.shutdowm_msg
+        cv2.destroyAllWindows()
 
 if __name__ == '__main__':
 
@@ -35,4 +53,5 @@ if __name__ == '__main__':
     else:
         topic = "/file/image"
 
-    handle_sub(topic)
+    imgSub = ImgSub(topic)
+    imgSub.handle_sub()
