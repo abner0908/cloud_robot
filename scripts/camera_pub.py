@@ -4,7 +4,6 @@ import roslib
 import cv2
 import os.path
 import sys
-import time
 import getopt
 from std_msgs.msg import String
 from sensor_msgs.msg import Image
@@ -13,6 +12,11 @@ from common import clock, draw_str
 
 KEY_ECS = 27
 FPS = 30
+show_video = False
+
+
+class ExitLoop(Exception):
+    pass
 
 
 def handle_pub(videoCapture):
@@ -34,11 +38,8 @@ def handle_pub(videoCapture):
         img_copy = img.copy()
         try:
             msg = bridge.cv2_to_imgmsg(img, "bgr8")
-            now = rospy.Time.now()
+            msg = add_timestamp(msg, count)
             count += 1
-            msg.header.frame_id = 'ros-lab_' + str(count)
-            msg.header.stamp.secs = now.secs
-            msg.header.stamp.nsecs = now.nsecs
             print msg.header
         except CvBridgeError as e:
             print(e)
@@ -46,26 +47,40 @@ def handle_pub(videoCapture):
         pub.publish(msg)
 
         if show_video == True:
-            time_span = clock() - time_start
-            if time_span == 0:
-                fps = 0
-            fps = frame_count / time_span
-            draw_str(img_copy, (5, 30), 'fps: %d' % fps)
-
-            cv2.imshow('play video', img_copy)
-            if 0xFF & cv2.waitKey(1) == KEY_ECS:
+            try:
+                play_video(img_copy, time_start, frame_count)
+                frame_count += 1
+            except ExitLoop:
+                cv2.destroyAllWindows()
                 break
-        time.sleep(.05)        
 
         # rate.sleep()
         success, img = videoCapture.read()
-        frame_count += 1
-    # end wile
-    cv2.destroyAllWindows()
 
+    # end wile
 # ....
 
-show_video = False
+
+def add_timestamp(msg, count):
+    from utility import get_hostname
+    now = rospy.Time.now()
+    msg.header.frame_id = get_hostname() + '_' + str(count)
+    msg.header.stamp.secs = now.secs
+    msg.header.stamp.nsecs = now.nsecs
+    return msg
+
+
+def play_video(img, time_start, frame_count):
+    time_span = clock() - time_start
+    if time_span == 0:
+        fps = 0
+    fps = frame_count / time_span
+    draw_str(img, (5, 30), 'fps: %d' % fps)
+
+    cv2.imshow('play video', img)
+    if 0xFF & cv2.waitKey(1) == KEY_ECS:
+        raise ExitLoop
+
 help_msg = "camera_pub.py [-w (show video)][-d <device number>]"
 
 if __name__ == '__main__':
