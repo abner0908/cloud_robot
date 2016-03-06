@@ -20,7 +20,7 @@ class ImgSub:
 
     def handle_sub(self):
         rospy.init_node('image_subscriber', anonymous=True)
-        #cv2.namedWindow("map image", 1)
+        cv2.namedWindow("map image", 1)
 
         self.sub = rospy.Subscriber(self.topic, Image, self.callback)
 
