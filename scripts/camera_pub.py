@@ -52,9 +52,9 @@ def handle_pub(videoCapture):
             except (ExitLoop, KeyboardInterrupt):
                 cv2.destroyAllWindows()
                 break
-        key = getch()
-        if key == ord('q') or key == KEY_ECS:
-            break
+        #key = getch()
+        #if key == ord('q') or key == KEY_ECS:
+            #break
         success, img = videoCapture.read()
 
     # end wile
