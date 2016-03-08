@@ -3,9 +3,7 @@ import cv2
 import cv2.cv as cv
 import rospy
 import sys
-import time
 import getopt
-import itertools as it
 from common import clock, draw_str
 from sensor_msgs.msg import Image
 from cv_bridge import CvBridge, CvBridgeError
@@ -97,7 +95,7 @@ help_msg = "cv_detect_face.py [-w (show video)] [-t <topic_name>]"
 
 if __name__ == '__main__':
     try:
-        opts, args = getopt.getopt(sys.argv[1:], 'wt:', '')
+        opts, args = getopt.getopt(sys.argv[1:], 'wt:i:o:', '')
     except getopt.GetoptError as err:
         print str(err)
         print help_msg
@@ -107,7 +105,7 @@ if __name__ == '__main__':
         print help_msg
         exit(1)
 
-    topic = None
+    topic = '/file/video'
     for key, value in opts:
         if key == '-w':
             show_video = True
@@ -117,6 +115,4 @@ if __name__ == '__main__':
             print help_msg
             exit(1)
 
-    if topic == None:
-        topic = '/file/video'
     handle_sub(topic)

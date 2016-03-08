@@ -1,15 +1,12 @@
 #!/usr/bin/env python
 import rospy
-import roslib
 import cv2
-import os.path
 import sys
 import getopt
-from std_msgs.msg import String
 from sensor_msgs.msg import Image
 from cv_bridge import CvBridge, CvBridgeError
 from common import clock, draw_str
-from utility import get_hostname, ExitLoop, getch
+from utility import get_hostname, ExitLoop
 
 KEY_ECS = 27
 FPS = 30
@@ -36,10 +33,11 @@ def handle_pub(videoCapture):
         img_copy = img.copy()
         try:
             msg = bridge.cv2_to_imgmsg(img, "bgr8")
-            msg = add_timestamp(msg, count)
             count += 1
+            msg = add_timestamp(msg, count)
+
             if verbose:
-                print msg.header
+                show_msg_info(msg)
         except CvBridgeError as e:
             print(e)
 
@@ -47,14 +45,12 @@ def handle_pub(videoCapture):
 
         if show_video:
             try:
-                play_video(img_copy, time_start, frame_count)
+                show_image(img_copy, time_start, frame_count)
                 frame_count += 1
             except (ExitLoop, KeyboardInterrupt):
                 cv2.destroyAllWindows()
                 break
-        key = getch
-        if key == ord('q') or key == KEY_ECS:
-            break
+
         success, img = videoCapture.read()
 
     # end wile
@@ -69,22 +65,28 @@ def add_timestamp(msg, count):
     return msg
 
 
-def play_video(img, time_start, frame_count):
+def show_image(img, time_start, frame_count):
     time_span = clock() - time_start
     if time_span == 0:
         fps = 0
-    fps = frame_count / time_span
+    else:
+        fps = frame_count / time_span
     draw_str(img, (5, 30), 'fps: %d' % fps)
 
     cv2.imshow('play video', img)
     if 0xFF & cv2.waitKey(1) == KEY_ECS:
         raise ExitLoop
 
-help_msg = "camera_pub.py [-w (show video)][-d <device number>]"
+
+def show_msg_info(msg):
+    import utility 
+    return utility.show_msg_info(msg)
+
+help_msg = "camera_pub.py [-w (show video)][-v (show message info)][-d <device number>]"
 
 if __name__ == '__main__':
     try:
-        opts, args = getopt.getopt(sys.argv[1:], 'wvd:', '')
+        opts, args = getopt.getopt(sys.argv[1:], 'hwvd:', '')
     except getopt.GetoptError as err:
         print str(err)
         print help_msg
@@ -98,6 +100,9 @@ if __name__ == '__main__':
             verbose = True
         elif key == '-d':
             device_num = int(value)
+        elif key == '-h':
+            print help_msg
+            exit(1)
         else:
             print help_msg
             exit(1)

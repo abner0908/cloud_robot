@@ -14,6 +14,18 @@ def get_ip_address():
     return s.getsockname()[0]
 
 
+def show_msg_info(msg):
+    result = 'header: \n'
+    result += str(msg.header) + '\n'
+    result += 'height: %s\n' % (msg.height)
+    result += 'width: %s\n' % (msg.width)
+    result += 'encoding: %s\n' % (msg.encoding)
+    result += 'is_bigendian: %s\n' % (msg.is_bigendian)
+    result += 'step: %s\n' % (msg.step)
+    result += 'data size: %s\n' % (len(msg.data))
+    print result
+
+
 class ExitLoop(Exception):
     pass
 
