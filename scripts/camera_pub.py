@@ -5,11 +5,10 @@ import sys
 import getopt
 from sensor_msgs.msg import Image
 from cv_bridge import CvBridge, CvBridgeError
-from common import clock, draw_str
-from utility import get_hostname, ExitLoop
+from common import draw_str
+from utility import get_hostname, ExitLoop, FPS
 
 KEY_ECS = 27
-FPS = 30
 show_video = False
 verbose = False
 
@@ -24,9 +23,8 @@ def handle_pub(videoCapture):
     pub = rospy.Publisher(topic, Image, queue_size=2)
 
     bridge = CvBridge()
-
-    time_start = clock()
-    frame_count = 0
+    fps = FPS()
+    fps = fps.start()
     success, img = videoCapture.read()
     count = 0
     while success:
@@ -37,7 +35,7 @@ def handle_pub(videoCapture):
             msg = add_timestamp(msg, count)
 
             if verbose:
-                show_msg_info(msg)
+                show_data_info(msg, fps)
         except CvBridgeError as e:
             print(e)
 
@@ -45,10 +43,9 @@ def handle_pub(videoCapture):
 
         if show_video:
             try:
-                show_image(img_copy, time_start, frame_count)
-                frame_count += 1
-            except (ExitLoop, KeyboardInterrupt):
-                cv2.destroyAllWindows()
+                show_image(img_copy, fps)
+            except (ExitLoop, KeyboardInterrupt, SystemExit):
+                cleanup(videoCapture)
                 break
 
         success, img = videoCapture.read()
@@ -65,22 +62,26 @@ def add_timestamp(msg, count):
     return msg
 
 
-def show_image(img, time_start, frame_count):
-    time_span = clock() - time_start
-    if time_span == 0:
-        fps = 0
-    else:
-        fps = frame_count / time_span
-    draw_str(img, (5, 30), 'fps: %d' % fps)
+def show_image(img, fps):
+    fps.update()
+    draw_str(img, (5, 30), 'fps: %s' % fps)
 
     cv2.imshow('play video', img)
     if 0xFF & cv2.waitKey(1) == KEY_ECS:
         raise ExitLoop
 
 
-def show_msg_info(msg):
-    import utility 
-    return utility.show_msg_info(msg)
+def show_data_info(msg, fps):
+    import utility
+    utility.show_msg_info(msg)
+    print('fps: %s' % fps)
+
+
+def cleanup(videoCapture):
+    videoCapture.release()
+    del(videoCapture)
+    cv2.destroyAllWindows()
+
 
 help_msg = "camera_pub.py [-w (show video)][-v (show message info)][-d <device number>]"
 
@@ -107,10 +108,10 @@ if __name__ == '__main__':
             print help_msg
             exit(1)
 
-    videoCapture = cv2.VideoCapture(device_num)
     try:
+        videoCapture = cv2.VideoCapture(device_num)
         handle_pub(videoCapture)
-    except Exception as e:
+    except (ExitLoop, KeyboardInterrupt, SystemExit) as e:
         print 'Error occured! error message: %s' % (e)
     finally:
-        videoCapture.release()
+        cleanup(videoCapture)

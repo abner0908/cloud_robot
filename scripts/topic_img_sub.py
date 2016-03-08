@@ -7,6 +7,7 @@ import getopt
 from sensor_msgs.msg import Image
 from common import clock, draw_str
 from cv_bridge import CvBridge, CvBridgeError
+from utility import FPS
 
 
 class ImgSub:
@@ -22,9 +23,11 @@ class ImgSub:
         self.node_name = 'image_subscriber'
         self.frame_count = 0
         self.time_start = clock()
+        self.fps = FPS()
 
     def run(self):
         print '%s node turn on' % (self.node_name)
+        self.fps = self.fps.start()
         self.handle_sub()
 
     def handle_sub(self):
@@ -44,7 +47,7 @@ class ImgSub:
         try:
             cv_image = self.bridge.imgmsg_to_cv2(msg, "bgr8")
             if self.verbose:
-                self.show_msg_info(msg)
+                self.show_data_info(msg)
         except CvBridgeError as e:
             print(e)
 
@@ -53,13 +56,9 @@ class ImgSub:
     # ...
 
     def show_video(self, img):
-        time_span = clock() - self.time_start
-        self.frame_count += 1
-        if time_span == 0:
-            fps = 0
-        else:
-            fps = self.frame_count / time_span
-        draw_str(img, (5, 30), 'fps: %d' % fps)
+        self.fps.update()
+        self.fps.stop()
+        draw_str(img, (5, 30), 'fps: %s' % self.fps)
 
         cv2.imshow("show %s" % (self.topic), img)
         if 0xFF & cv2.waitKey(1) == self.KEY_ECS:
@@ -71,9 +70,11 @@ class ImgSub:
             img = mirror_image(img)
         return img
 
-    def show_msg_info(self, msg):
+    def show_data_info(self, msg):
         import utility
-        return utility.show_msg_info(msg)
+        utility.show_msg_info(msg)
+        self.fps.stop()
+        print('fps: %s' % self.fps)
 
     def cleanup(self):
         print self.shutdowm_msg
