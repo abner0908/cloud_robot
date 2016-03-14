@@ -1,4 +1,6 @@
+#!/usr/bin/env python
 import socket
+from common import clock
 
 
 def get_hostname():
@@ -14,9 +16,9 @@ def get_ip_address():
     return s.getsockname()[0]
 
 
-def show_msg_info(msg):
+def show_msg_info(msg, pinned=True, showLatency=False):
     import sys
-    prefix = '\033[2J\033[;H'
+
     result = 'header: \n'
     result += str(msg.header) + '\n'
     result += 'height: %s\n' % (msg.height)
@@ -25,11 +27,23 @@ def show_msg_info(msg):
     result += 'is_bigendian: %s\n' % (msg.is_bigendian)
     result += 'step: %s\n' % (msg.step)
     result += 'data size: %s\n' % (len(msg.data))
-    sys.stdout.write(prefix + result)
+
+    if showLatency:
+        import rospy
+        secs = int(msg.header.stamp.secs)
+        nsecs = int(msg.header.stamp.nsecs)
+        latency = rospy.Time.now() - rospy.Time(secs, nsecs)
+        result += 'latency: %.3f ms\n' % (latency.to_nsec() / 1000000.0)
+
+    if pinned:
+        pinned_prefix(result)
+    else:
+        print(result)
 
 
-# import the necessary packages
-from common import clock
+def pinned_prefix(content):
+    prefix = '\033[2J\033[;H'
+    print(prefix + str(content))
 
 
 class FPS:
@@ -40,6 +54,7 @@ class FPS:
         self._start = None
         self._end = None
         self._numFrames = 0
+        self._window_size = 120
 
     def __str__(self):
         self.stop()
@@ -58,6 +73,12 @@ class FPS:
         # increment the total number of frames examined during the
         # start and end intervals
         self._numFrames += 1
+        if self._numFrames == self._window_size * 2:
+            self._numFrames -= 120
+            self._start = self._window_start
+
+        if self._numFrames == self._window_size:
+            self._window_start = clock()
 
     def elapsed(self):
         # return the total number of seconds between the start and
@@ -73,50 +94,12 @@ class ExitLoop(Exception):
     pass
 
 
-class _Getch:
-    """
-    Gets a single character from standard input.  Does not echo to the
-    screen.
-    """
+if __name__ == "__main__":
+    import time
+    fps = FPS()
+    fps.start()
 
-    def __init__(self):
-        try:
-            self.impl = _GetchWindows()
-        except ImportError:
-            self.impl = _GetchUnix()
-
-    def __call__(self):
-        return self.impl()
-
-
-class _GetchUnix:
-
-    def __init__(self):
-        import tty
-        import sys
-
-    def __call__(self):
-        import sys
-        import tty
-        import termios
-        fd = sys.stdin.fileno()
-        old_settings = termios.tcgetattr(fd)
-        try:
-            tty.setraw(sys.stdin.fileno())
-            ch = sys.stdin.read(1)
-        finally:
-            termios.tcsetattr(fd, termios.TCSADRAIN, old_settings)
-        return ch
-
-
-class _GetchWindows:
-
-    def __init__(self):
-        import msvcrt
-
-    def __call__(self):
-        import msvcrt
-        return msvcrt.getch()
-
-
-getch = _Getch()
+    while True:
+        fps.update()
+        time.sleep(0.03)
+        pinned_prefix('fps: %s' % (fps))

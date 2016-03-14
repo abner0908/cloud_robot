@@ -57,7 +57,6 @@ class ImgSub:
 
     def show_video(self, img):
         self.fps.update()
-        self.fps.stop()
         draw_str(img, (5, 30), 'fps: %s' % self.fps)
 
         cv2.imshow("show %s" % (self.topic), img)
@@ -72,8 +71,7 @@ class ImgSub:
 
     def show_data_info(self, msg):
         import utility
-        utility.show_msg_info(msg)
-        self.fps.stop()
+        utility.show_msg_info(msg, showLatency=True)
         print('fps: %s' % self.fps)
 
     def cleanup(self):
