@@ -21,7 +21,6 @@ class ImgSub:
         rospy.on_shutdown(self.cleanup)
         self.shutdowm_msg = "Shutting down."
         self.node_name = 'image_subscriber'
-        self.frame_count = 0
         self.time_start = clock()
         self.fps = FPS()
 
@@ -60,8 +59,13 @@ class ImgSub:
         draw_str(img, (5, 30), 'fps: %s' % self.fps)
 
         cv2.imshow("show %s" % (self.topic), img)
-        if 0xFF & cv2.waitKey(1) == self.KEY_ECS:
+        key = cv2.waitKey(1)
+        if 0xFF & key == self.KEY_ECS:
             rospy.signal_shutdown("User hit q key to quit.")
+        elif 0xFF & key == ord('a'):
+            file_name = 'image_%s.jpg' % (str(int(clock())))
+            cv2.imwrite(file_name, img)
+            print '%s has saved.' % file_name
 
     def mirror_image(self, img):
         if self.should_mirror:
