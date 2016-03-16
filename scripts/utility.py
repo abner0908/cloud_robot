@@ -36,7 +36,7 @@ def show_msg_info(msg, pinned=True, showLatency=False):
         result += 'latency: %.3f ms\n' % (latency_ms)
 
     if pinned:
-        pinned_prefix(result)
+        result = pinned_prefix(result)
 
     print(result)
 
@@ -45,7 +45,7 @@ def show_msg_info(msg, pinned=True, showLatency=False):
 
 def pinned_prefix(content):
     prefix = '\033[2J\033[;H'
-    print(prefix + str(content))
+    return (prefix + str(content))
 
 
 class FPS:

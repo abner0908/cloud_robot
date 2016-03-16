@@ -10,6 +10,7 @@ def add_timestamp(msg, count):
     msg.header.frame_id = get_hostname() + '_' + str(count)
     msg.header.stamp.secs = now.secs
     msg.header.stamp.nsecs = now.nsecs
+    msg.data = 'done'
     return msg
 
 node_name = "complex_pub_" + utility.get_hostname()

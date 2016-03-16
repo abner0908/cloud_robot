@@ -7,6 +7,7 @@ import getopt
 from sensor_msgs.msg import Image
 from common import clock, draw_str
 from cv_bridge import CvBridge, CvBridgeError
+from cloud_robot.msg import FaceDetect
 from utility import FPS
 
 
@@ -36,7 +37,7 @@ class ImgSub:
         rospy.init_node(self.node_name, anonymous=True)
         cv2.namedWindow("show %s" % (self.topic), 10)
 
-        self.sub = rospy.Subscriber(self.topic, Image, self.callback)
+        self.sub = rospy.Subscriber(self.topic, FaceDetect, self.callback)
 
         try:
             rospy.spin()
@@ -45,16 +46,7 @@ class ImgSub:
             cv2.destroyAllWindows()
 
     def callback(self, msg):
-
-        try:
-            cv_image = self.bridge.imgmsg_to_cv2(msg, "bgr8")
-            if self.verbose:
-                self.show_data_info(msg)
-        except CvBridgeError as e:
-            print(e)
-
-        cv_image = self.mirror_image(cv_image)
-        self.show_video(cv_image)
+        self.show_data_info(msg)
         self.frame_count += 1
         if self.frame_count >= self.limit:
             rospy.signal_shutdown("reach the limit of frames.")
@@ -81,8 +73,15 @@ class ImgSub:
 
     def show_data_info(self, msg):
         import utility
-        self.total_latency += utility.show_msg_info(msg, showLatency=True)
-        print('fps: %s' % self.fps)
+        result = 'header: \n'
+        result += str(msg.header) + '\n'
+        result = utility.pinned_prefix(result)
+        secs = int(msg.header.stamp.secs)
+        nsecs = int(msg.header.stamp.nsecs)
+        latency = rospy.Time.now() - rospy.Time(secs, nsecs)
+        latency_ms = latency.to_nsec() / 1000000.0
+        print result
+        print 'latency: %.3f ms\n' % (latency_ms)
 
     def cleanup(self):
         print self.shutdowm_msg
