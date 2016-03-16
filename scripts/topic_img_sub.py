@@ -114,4 +114,7 @@ if __name__ == '__main__':
             exit(1)
 
     imgSub = ImgSub(topic, should_mirror, verbose)
-    imgSub.run()
+    try:
+        imgSub.run()
+    finally:
+        imgSub.cleanup()

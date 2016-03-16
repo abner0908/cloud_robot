@@ -17,8 +17,7 @@ def get_ip_address():
 
 
 def show_msg_info(msg, pinned=True, showLatency=False):
-    import sys
-
+    import rospy
     result = 'header: \n'
     result += str(msg.header) + '\n'
     result += 'height: %s\n' % (msg.height)
@@ -28,17 +27,20 @@ def show_msg_info(msg, pinned=True, showLatency=False):
     result += 'step: %s\n' % (msg.step)
     result += 'data size: %s\n' % (len(msg.data))
 
+    secs = int(msg.header.stamp.secs)
+    nsecs = int(msg.header.stamp.nsecs)
+    latency = rospy.Time.now() - rospy.Time(secs, nsecs)
+    latency_ms = latency.to_nsec() / 1000000.0
+
     if showLatency:
-        import rospy
-        secs = int(msg.header.stamp.secs)
-        nsecs = int(msg.header.stamp.nsecs)
-        latency = rospy.Time.now() - rospy.Time(secs, nsecs)
-        result += 'latency: %.3f ms\n' % (latency.to_nsec() / 1000000.0)
+        result += 'latency: %.3f ms\n' % (latency_ms)
 
     if pinned:
         pinned_prefix(result)
-    else:
-        print(result)
+
+    print(result)
+
+    return latency_ms
 
 
 def pinned_prefix(content):
@@ -59,6 +61,10 @@ class FPS:
     def __str__(self):
         self.stop()
         return str(self.fps())
+
+    def __float__(self):
+        self.stop()
+        return self.fps()
 
     def start(self):
         # start the timer
