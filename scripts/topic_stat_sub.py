@@ -58,9 +58,6 @@ class ImgSub:
         self.frame_count += 1
         if self.frame_count >= self.limit:
             rospy.signal_shutdown("reach the limit of frames.")
-            print '%s frames has be played' % (self.frame_count)
-            print 'total latency: %s' % (self.total_latency)
-            print 'average latency: %s' % (self.total_latency / self.frame_count)
     # ...
 
     def show_video(self, img):
@@ -128,3 +125,6 @@ if __name__ == '__main__':
         imgSub.run()
     finally:
         imgSub.cleanup()
+        print '%s frames has be played' % (imgSub.frame_count)
+        print 'total latency: %s' % (imgSub.total_latency)
+        print 'average latency: %s' % (imgSub.total_latency / imgSub.frame_count)

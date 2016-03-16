@@ -17,6 +17,7 @@ class FaceDetection:
         self.should_show_video = should_show_video
         self.compute_index = compute_index
         self.total_nodes = total_nodes
+        self.before = before
         self.bridge = CvBridge()
         self.cascade_fn = "./model/haarcascades/haarcascade_frontalface_alt.xml"
         self.nested_fn = "./model/haarcascades/haarcascade_eye.xml"
@@ -49,7 +50,7 @@ class FaceDetection:
         cv2.destroyAllWindows()
 
     def callback(self, msg_sub):
-        if before:
+        if self.before:
             now = rospy.Time.now()
         try:
             img = self.bridge.imgmsg_to_cv2(msg_sub, "bgr8")
@@ -65,7 +66,7 @@ class FaceDetection:
 
             try:
                 msg_pub = self.bridge.cv2_to_imgmsg(img_detected, "bgr8")
-                if not before:
+                if not self.before:
                     now = rospy.Time.now()
                 msg_pub = self.add_header(msg_pub, msg_sub, now)
             except CvBridgeError as e:
