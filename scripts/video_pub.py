@@ -8,10 +8,11 @@ import select
 import tty
 import termios
 import imtools
+from imtools import FPS
 from common import draw_str
 from sensor_msgs.msg import Image
 from cv_bridge import CvBridge, CvBridgeError
-from utility import get_hostname, ExitLoop, FPS
+from utility import get_hostname, ExitLoop
 
 
 class VideoPub:
