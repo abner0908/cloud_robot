@@ -27,6 +27,7 @@ class ImgSub:
         self.frame_count = 0
         self.total_latency = 0
         self.fps = FPS()
+        self.hosts = {}
 
     def run(self):
         print '%s node turn on' % (self.node_name)
@@ -65,11 +66,12 @@ class ImgSub:
             cv2.imwrite(file_name, img)
             print '%s has saved.' % file_name
 
-    def mirror_image(self, img):
-        if self.should_mirror:
-            from imtools import mirror_image
-            img = mirror_image(img)
-        return img
+    def count_frames(self, msg):
+        host = msg.header.frame_id.split('-')[0]
+        if host in self.host:
+            self.host[host] += 1
+        else:
+            self.host[host] = 1
 
     def show_data_info(self, msg):
         import utility
@@ -80,6 +82,7 @@ class ImgSub:
         nsecs = int(msg.header.stamp.nsecs)
         latency = rospy.Time.now() - rospy.Time(secs, nsecs)
         latency_ms = latency.to_nsec() / 1000000.0
+        self.count_frames(msg)
         print result
         print 'latency: %.3f ms\n' % (latency_ms)
 
@@ -127,3 +130,4 @@ if __name__ == '__main__':
         print '%s frames has be played' % (imgSub.frame_count)
         print 'total latency: %s' % (imgSub.total_latency)
         print 'average latency: %s' % (imgSub.total_latency / imgSub.frame_count)
+        print imgSub.hosts

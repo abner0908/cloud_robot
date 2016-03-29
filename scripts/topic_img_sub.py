@@ -23,23 +23,22 @@ class ImgSub:
         self.node_name = 'image_subscriber'
         self.time_start = clock()
         self.fps = FPS()
+        self.frames = []
+        self.frame_max = 90
 
     def run(self):
         print '%s node turn on' % (self.node_name)
         self.fps = self.fps.start()
         self.handle_sub()
-
-    def handle_sub(self):
-        rospy.init_node(self.node_name, anonymous=True)
-        cv2.namedWindow("show %s" % (self.topic), 1)
-
-        self.sub = rospy.Subscriber(self.topic, Image, self.callback)
-
+        self.show_video()
         try:
             rospy.spin()
         except KeyboardInterrupt:
-            print(self.shutdowm_msg)
-            cv2.destroyAllWindows()
+            self.cleanup()
+
+    def handle_sub(self):
+        rospy.init_node(self.node_name, anonymous=True)
+        self.sub = rospy.Subscriber(self.topic, Image, self.callback)
 
     def callback(self, msg):
 
@@ -51,21 +50,28 @@ class ImgSub:
             print(e)
 
         cv_image = self.mirror_image(cv_image)
-        self.show_video(cv_image)
+        if len(self.frames) >= self.frame_max:
+            self.frames.pop(0)
+
+        self.frames.append(cv_image)
+        print "queue szie: %s" % (len(self.frames))
     # ...
 
-    def show_video(self, img):
-        self.fps.update()
-        draw_str(img, (5, 30), 'fps: %s' % self.fps)
+    def show_video(self):
+        while not rospy.is_shutdown():
+            if len(self.frames) > 0:
+                img = self.frames.pop(0)
+                self.fps.update()
+                draw_str(img, (5, 30), 'fps: %s' % self.fps)
 
-        cv2.imshow("show %s" % (self.topic), img)
-        key = cv2.waitKey(1)
-        if 0xFF & key == self.KEY_ECS:
-            rospy.signal_shutdown("User hit q key to quit.")
-        elif 0xFF & key == ord('a'):
-            file_name = 'image_%s.jpg' % (str(int(clock())))
-            cv2.imwrite(file_name, img)
-            print '%s has saved.' % file_name
+                cv2.imshow("show %s" % (self.topic), img)
+                key = cv2.waitKey(1)
+                if 0xFF & key == self.KEY_ECS:
+                    rospy.signal_shutdown("User hit q key to quit.")
+                elif 0xFF & key == ord('a'):
+                    file_name = 'image_%s.jpg' % (str(int(clock())))
+                    cv2.imwrite(file_name, img)
+                    print '%s has saved.' % file_name
 
     def mirror_image(self, img):
         if self.should_mirror:
@@ -76,7 +82,7 @@ class ImgSub:
     def show_data_info(self, msg):
         import utility
         utility.show_msg_info(msg, showLatency=True)
-        print('fps: %s' % self.fps)
+        print 'fps: %s' % (self.fps)
 
     def cleanup(self):
         print self.shutdowm_msg

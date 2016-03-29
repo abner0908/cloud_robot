@@ -128,7 +128,7 @@ class FaceDetection:
 
     def add_header(self, msg_pub, msg_sub, now):
         self.count += 1
-        msg_pub.header.frame_id = get_hostname() + '_' + str(self.count)
+        msg_pub.header.frame_id = get_hostname() + '-' + str(self.count)
         msg_pub.header.stamp.secs = now.secs
         msg_pub.header.stamp.nsecs = now.nsecs
         # msg_pub.header.frame_id = msg_sub.header.frame_id

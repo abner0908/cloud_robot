@@ -4,6 +4,10 @@ import cv2
 import sys
 import os
 import getopt
+import select
+import tty
+import termios
+import imtools
 from common import draw_str
 from sensor_msgs.msg import Image
 from cv_bridge import CvBridge, CvBridgeError
@@ -20,6 +24,7 @@ class VideoPub:
         self.rate = rate
         self.bridge = CvBridge()
         self.KEY_ECS = 27
+        self.old_attr = termios.tcgetattr(sys.stdin)
 
     def run(self):
         self.handle_pub()
@@ -33,9 +38,15 @@ class VideoPub:
         fps = FPS()
         fps = fps.start()
         rate = rospy.Rate(self.rate)
-        success, img = self.videoCapture.read()
 
-        while success:
+        while not rospy.is_shutdown():
+            success, img = self.videoCapture.read()
+            if not success:
+                break
+
+            key = self.getKey()
+            if len(key) > 0 and (ord(key) == imtools.KEY_CTRL_C or key == 'q'):
+                break
 
             try:
                 msg = self.bridge.cv2_to_imgmsg(img, "bgr8")
@@ -56,14 +67,13 @@ class VideoPub:
             if self.show_info:
                 self.show_data_info(msg, fps)
 
-            success, img = self.videoCapture.read()
             rate.sleep()
         # end wile
     # ....
 
     def add_timestamp(self, msg, count):
         now = rospy.Time.now()
-        msg.header.frame_id = get_hostname() + '_' + str(count)
+        msg.header.frame_id = get_hostname() + '-' + str(count)
         msg.header.stamp.secs = now.secs
         msg.header.stamp.nsecs = now.nsecs
         return msg
@@ -80,15 +90,30 @@ class VideoPub:
         import utility
         utility.show_msg_info(msg)
         print('fps: %s' % round(fps, 2))
+        print '%s' % (quit_msg)
+
+    def getKey(self):
+        tty.setraw(sys.stdin.fileno())
+        rlist, _, _ = select.select([sys.stdin], [], [], 0.1)
+        if rlist:
+            key = sys.stdin.read(1)
+        else:
+            key = ''
+
+        termios.tcsetattr(sys.stdin, termios.TCSADRAIN, self.old_attr)
+        return key
 
     def cleanup(self):
         self.videoCapture.release()
         cv2.destroyAllWindows()
+        termios.tcsetattr(sys.stdin, termios.TCSADRAIN, self.old_attr)
 
 
-help_msg = "camera_pub.py [-w (show video)][-v (show message info)][-d <device number>]"
-help_msg += "[-t <topic name>][-f <file path>][-r <play rate>]"
 if __name__ == '__main__':
+    help_msg = "camera_pub.py [-w (show video)][-v (show message info)][-d <device number>]"
+    help_msg += "[-t <topic name>][-f <file path>][-r <play rate>]"
+    quit_msg = 'press CRTL + C or q to quit'
+
     try:
         opts, args = getopt.getopt(sys.argv[1:], 'hwvd:t:f:r:', '')
     except getopt.GetoptError as err:
@@ -105,6 +130,7 @@ if __name__ == '__main__':
     for key, value in opts:
         if key == '-w':
             show_window = True
+            quit_msg = 'press ESC to quit'
         elif key == '-v':
             show_info = True
         elif key == '-d':
@@ -130,10 +156,11 @@ if __name__ == '__main__':
     if topic == None:
         topic = '/%s/video' % source
 
-    stars = '*' * 60
-    print stars
+    stars = '-' * 60
+    print '\n%s' % (stars)
     print "publish video to topic: %s from the %s ..." % (topic, source)
-    print stars
+    print '%s' % (quit_msg)
+    print '%s' % (stars)
 
     videoPub = VideoPub(videoCapture, topic, show_window, show_info, rate=rate)
     try:

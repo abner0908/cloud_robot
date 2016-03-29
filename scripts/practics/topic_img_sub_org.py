@@ -12,7 +12,7 @@ from utility import FPS
 
 class ImgSub:
 
-    def __init__(self, topic, should_mirror, verbose, limit=1000):
+    def __init__(self, topic, should_mirror, verbose):
         self.topic = topic
         self.KEY_ECS = 27
         self.should_mirror = should_mirror
@@ -22,9 +22,6 @@ class ImgSub:
         self.shutdowm_msg = "Shutting down."
         self.node_name = 'image_subscriber'
         self.time_start = clock()
-        self.limit = limit
-        self.frame_count = 0
-        self.total_latency = 0
         self.fps = FPS()
 
     def run(self):
@@ -34,7 +31,7 @@ class ImgSub:
 
     def handle_sub(self):
         rospy.init_node(self.node_name, anonymous=True)
-        cv2.namedWindow("show %s" % (self.topic), 10)
+        cv2.namedWindow("show %s" % (self.topic), 1)
 
         self.sub = rospy.Subscriber(self.topic, Image, self.callback)
 
@@ -55,9 +52,6 @@ class ImgSub:
 
         cv_image = self.mirror_image(cv_image)
         self.show_video(cv_image)
-        self.frame_count += 1
-        if self.frame_count >= self.limit:
-            rospy.signal_shutdown("reach the limit of frames.")
     # ...
 
     def show_video(self, img):
@@ -81,7 +75,7 @@ class ImgSub:
 
     def show_data_info(self, msg):
         import utility
-        self.total_latency += utility.show_msg_info(msg, showLatency=True)
+        utility.show_msg_info(msg, showLatency=True)
         print('fps: %s' % self.fps)
 
     def cleanup(self):
@@ -91,28 +85,27 @@ class ImgSub:
 stars = '*' * 5
 help_msg = stars
 help_msg += "file_img_sub.py [-m (mirror image)]"
-help_msg += "[-t <topic name>][-l <frmae limit>]"
+help_msg += "[-v (show message info)][-t <topic name>]"
 help_msg += stars
 
 if __name__ == '__main__':
     try:
-        opts, args = getopt.getopt(sys.argv[1:], 'hmt:l:', '')
+        opts, args = getopt.getopt(sys.argv[1:], 'hmvt:', '')
     except getopt.GetoptError as err:
         print str(err)
         print help_msg
         exit(1)
 
     should_mirror = False
-    verbose = True
-    limit = 1000
+    verbose = False
     topic = '/camera/video'
     for key, value in opts:
         if key == '-m':
             should_mirror = True
+        elif key == '-v':
+            verbose = True
         elif key == '-t':
             topic = value
-        elif key == '-l':
-            limit = int(value)
         elif key == '-h':
             print help_msg
             exit(1)
@@ -120,11 +113,8 @@ if __name__ == '__main__':
             print help_msg
             exit(1)
 
-    imgSub = ImgSub(topic, should_mirror, verbose, limit=limit)
+    imgSub = ImgSub(topic, should_mirror, verbose)
     try:
         imgSub.run()
     finally:
         imgSub.cleanup()
-        print '%s frames has be played' % (imgSub.frame_count)
-        print 'total latency: %s' % (imgSub.total_latency)
-        print 'average latency: %s' % (imgSub.total_latency / imgSub.frame_count)

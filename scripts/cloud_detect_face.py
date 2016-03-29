@@ -1,9 +1,11 @@
 #!/usr/bin/env python
 import cv2
 import cv2.cv as cv
+import numpy as np
 import rospy
 import sys
 import getopt
+import imtools
 from sensor_msgs.msg import Image
 from cv_bridge import CvBridge, CvBridgeError
 
@@ -12,27 +14,35 @@ class FaceDetection:
 
     def __init__(self, topic, show_video, compute_index, total_nodes):
         self.topic_sub = topic
-        self.KEY_ECS = 27
         self.should_show_video = should_show_video
         self.compute_index = compute_index
         self.total_nodes = total_nodes
         self.bridge = CvBridge()
-        self.cascade_fn = "./model/haarcascades/haarcascade_frontalface_alt.xml"
-        self.nested_fn = "./model/haarcascades/haarcascade_eye.xml"
-        self.cascade = cv2.CascadeClassifier(self.cascade_fn)
-        self.nested = cv2.CascadeClassifier(self.nested_fn)
+        cascade_fn = "./model/haarcascades/haarcascade_frontalface_alt.xml"
+        nested_fn = "./model/haarcascades/haarcascade_eye.xml"
+        self.cascade = cv2.CascadeClassifier(cascade_fn)
+        self.nested = cv2.CascadeClassifier(nested_fn)
         self.face_color = (0, 255, 0)
         self.eye_color = (255, 0, 0)
         self.shutdowm_msg = "Shutting down."
         self.node_name = 'face_detec_' + str(compute_index)
         self.topic_pub = "/cloud/detect/face"
+        self.recognizer = cv2.createLBPHFaceRecognizer()
+        self.Pause = False
+        self.faces = []
+        self.names = {}
 
     def run(self):
         print '%s node turn on' % (self.node_name)
         print 'face detecting....'
-        self.handle_sub()
+        self.buildFaceMode()
+        self.handle_ros()
 
-    def handle_sub(self):
+    def buildFaceMode(self):
+        images, labels = self.get_images_and_labels("./faces")
+        self.recognizer.train(images, np.array(labels))
+
+    def handle_ros(self):
         rospy.init_node(self.node_name, anonymous=True)
         rospy.on_shutdown(self.cleanup)
 
@@ -53,25 +63,27 @@ class FaceDetection:
         except CvBridgeError as e:
             print(e)
 
-        should_process = int(
+        is_assigned = int(
             msg_sub.header.seq) % self.total_nodes == self.compute_index
-        if should_process:
-            img_detected = self.detect_face(img)
+        if is_assigned:
+            if not self.Pause:
+                img_detected, rects = self.detect_face(img)
 
-            self.show_video(img)
+                self.show_video(img_detected, img, rects)
 
-            try:
-                msg_pub = self.bridge.cv2_to_imgmsg(img_detected, "bgr8")
-                msg_pub = self.add_header(msg_pub, msg_sub)
-            except CvBridgeError as e:
-                print(e)
+                # convert data into msg and publish them
+                try:
+                    msg_pub = self.bridge.cv2_to_imgmsg(img_detected, "bgr8")
+                    msg_pub = self.add_header(msg_pub, msg_sub)
+                except CvBridgeError as e:
+                    print(e)
 
-            try:
-                self.pub.publish(msg_pub)
-            except CvBridgeError as e:
-                print(e)
-        else:
-            pass
+                try:
+                    self.pub.publish(msg_pub)
+                except CvBridgeError as e:
+                    print(e)
+            else:
+                self.handle_key_event()
     # ....
 
     def detect(self, img, cascade):
@@ -102,7 +114,7 @@ class FaceDetection:
             subrects = self.detect(roi.copy(), self.nested)
             self.draw_rects(copy_roi, subrects, self.eye_color)
 
-        return copy
+        return copy, rects
     # end def detect_face
 
     def cleanup(self):
@@ -110,12 +122,94 @@ class FaceDetection:
         cv2.destroyAllWindows()
     # ...
 
-    def show_video(self, img):
+    def show_video(self, img_detected, original, rects):
         if self.should_show_video:
-            cv2.imshow('face detection', img)
-            if 0xFF & cv2.waitKey(1) == self.KEY_ECS:
-                rospy.signal_shutdown("User hit q key to quit.")
+            FACE_DEFAULT_WIDTH = 100
+            SMALL_FACE_X = 0
+
+            for (x1, y1, x2, y2) in rects:
+                # get detected face images
+                face = self.fetch_face(original, (x1, y1, x2, y2))
+                self.faces.append(face)
+
+                # recognize the name of a face
+                face = imtools.resize(face, width=FACE_DEFAULT_WIDTH)
+                gray = cv2.cvtColor(face, cv2.COLOR_BGR2GRAY)
+                id, conf = self.recognizer.predict(gray)
+                if conf < 200:
+                    cv2.putText(img_detected, self.get_name(id), (x1, y1 - 10),
+                                cv2.FONT_HERSHEY_SIMPLEX, 0.9, (0, 255, 0), 2)
+
+                # embed face into original image
+                img_detected = self.embed_face(
+                    img_detected, face, SMALL_FACE_X, 0)
+                SMALL_FACE_X = SMALL_FACE_X + FACE_DEFAULT_WIDTH
+
+            cv2.imshow('face detection', img_detected)
+            self.handle_key_event()
     # ...
+
+    def get_name(self, id):
+        name = 'unkown'
+        for key in self.names:
+            if self.names[key] == id:
+                return key
+        return name
+
+    def fetch_face(self, img, rect):
+        (x1, y1, x2, y2) = rect
+        face = img[y1:y2, x1:x2]
+        return face
+
+    def embed_face(self, img, face, X, Y):
+        face_h, face_w = face.shape[:2]
+        face_x1, face_y1 = X, Y
+        face_x2, face_y2 = face_x1 + face_w, face_y1 + face_h
+        img = imtools.embedInto(face, img, (face_x1, face_y1))
+        cv2.rectangle(img, (face_x1, face_y1),
+                      (face_x2, face_y2), (0, 0, 255), 2)
+        return img
+
+    def handle_key_event(self):
+        key = 0xFF & cv2.waitKey(1)
+        # exit the program
+        if key == imtools.KEY_ECS:
+            rospy.signal_shutdown("User hit q key to quit.")
+        # pause video playing
+        elif key == imtools.KEY_SPACE:
+            self.Pause = not self.Pause
+        # save face images
+        elif key == ord('s'):
+            if len(self.faces) > 0:
+                for face in self.faces:
+                    file_name = './faces/face_%s.jpg' % (
+                        rospy.Time.now().to_nsec())
+                    cv2.imwrite(file_name, face)
+                print '%s face images has saved.' % (len(self.faces))
+            else:
+                print 'no face is detected!!'
+
+    def get_images_and_labels(self, path):
+        import os
+
+        image_paths = [os.path.join(path, f) for f in os.listdir(path)]
+        # images will contains face images
+        images = []
+        # labels will contains the label that is assigned to the image
+        labels = []
+        for image_path in image_paths:
+            # Read the image and convert to grayscale
+            image = cv2.imread(image_path)
+            # Convert the image format into numpy array
+            image = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
+            # Get the label of the image
+            name = os.path.split(image_path)[1].split("_")[0]
+            if not name in self.names:
+                self.names[name] = len(self.names) + 1
+            labels.append(self.names[name])
+            images.append(image)
+
+        return images, labels
 
     def add_header(self, msg_pub, msg_sub):
         msg_pub.header.frame_id = msg_sub.header.frame_id
