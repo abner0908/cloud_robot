@@ -7,6 +7,7 @@ import sys
 import getopt
 import imtools
 from sensor_msgs.msg import Image
+from keys_to_twist import Keys_to_Twist
 from cv_bridge import CvBridge, CvBridgeError
 
 
@@ -30,7 +31,12 @@ class FaceDetection:
         self.recognizer = cv2.createLBPHFaceRecognizer()
         self.Pause = False
         self.faces = []
+        self.rects = []
         self.name_id = {}
+        self.name_rect = {}
+        self.target = 'lena'
+        self.move_ctrl = Keys_to_Twist()
+        self.move_ctrl.init_ros()
 
     def run(self):
         print '%s node turn on' % (self.node_name)
@@ -70,6 +76,7 @@ class FaceDetection:
     def add_names(self, name):
         if not name in self.name_id:
             self.name_id[name] = len(self.name_id) + 1
+            self.name_rect[name] = None
 
     def handle_ros(self):
         rospy.init_node(self.node_name, anonymous=True)
@@ -89,6 +96,7 @@ class FaceDetection:
 
         try:
             img = self.bridge.imgmsg_to_cv2(msg_sub, "bgr8")
+            img = imtools.mirror_image(img)
         except CvBridgeError as e:
             print(e)
 
@@ -162,9 +170,11 @@ class FaceDetection:
                 # get detected face images
                 face = self.fetch_face(original, (x1, y1, x2, y2))
                 self.faces.append(face)
-
+                self.rects.append(rect)
                 name = self.recognize_face(face)
-                if name is not None:
+                if name is not None and name in self.name_rect:
+                    self.name_rect[name] = rect
+                    #self.trace_face(name, original.shape[1] / 2)
                     cv2.putText(img_detected, name, (x1, y1 - 10),
                                 cv2.FONT_HERSHEY_SIMPLEX, 0.9, (0, 255, 0), 2)
 
@@ -177,6 +187,19 @@ class FaceDetection:
             cv2.imshow('face detection', img_detected)
             self.handle_key_event()
     # ...
+
+    def trace_face(self, name, im_mid):
+        if self.target == name:
+            rect = self.name_rect[name]
+            (x1, y1, x2, y2) = rect
+            face_mid = x1 + (x2 - x1) / 2
+            if face_mid > im_mid:
+                self.move_ctrl.turnRight()
+            elif face_mid < im_mid:
+                self.move_ctrl.turnLeft()
+            else:
+                self.move_ctrl.stop()
+            self.move_ctrl.send_twist()
 
     def fetch_face(self, img, rect):
         (x1, y1, x2, y2) = rect

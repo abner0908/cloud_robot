@@ -60,11 +60,14 @@ class Keys_to_Twist:
     # end  def __init__(self):
 
     def run(self):
+        self.init_node()
         self.init_ros()
         self.keys_process()
 
-    def init_ros(self):
+    def init_node(self):
         rospy.init_node(self.node_name)
+
+    def init_ros(self):
         self.pub = rospy.Publisher(self.topic_pub, Twist, queue_size=5)
         self.sub = rospy.Subscriber(self.topic_sub, String, self.callback)
 
@@ -100,6 +103,27 @@ class Keys_to_Twist:
                 self.send_twist()
             except ExitLoop:
                 break
+
+    def forward(self):
+        self.add_key('w')
+
+    def backward(self):
+        self.add_key('s')
+
+    def turnRight(self):
+        self.add_key('d')
+
+    def turnLeft(self):
+        self.add_key('a')
+
+    def forwardRight(self):
+        self.add_key('e')
+
+    def forwardLeft(self):
+        self.add_key('q')
+
+    def stop(self):
+        self.add_key('x')
 
     def send_twist(self):
 
