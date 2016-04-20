@@ -10,6 +10,7 @@ KEY_ESC = 27
 KEY_SPACE = 32
 KEY_CTRL_C = 3
 
+
 def get_imlist(path):
     """ Returns a list of filenames for
         all jpg images in a directory. """
@@ -156,6 +157,14 @@ def embedInto(src, dst, loc=(0, 0)):
     return dst
 
 
+def get_width(img):
+    return img.shape[1]
+
+
+def get_height(img):
+    return img.shape[0]
+
+
 class VideoManager:
 
     def __init__(self, videoCapture, title='play video', process=None, keyEvent=None):
@@ -163,7 +172,6 @@ class VideoManager:
         self.process = process
         self.title = title
         self.keyEvent = keyEvent
-        self.frame = None
         self.play_stop = False
         if not process:
             self.process = self.notProcess
@@ -252,6 +260,40 @@ class FPS:
     def fps(self):
         # compute the (approximate) frames per second
         return self._numFrames / self.elapsed()
+
+
+class ImagePlayer:
+
+    def __init__(self, title='Image Showing', showInfo=True):
+        self.title = title
+        self.key = None
+        self.showFPS = showInfo
+        self.fps = FPS()
+        self.fps.start()
+
+    def show(self, img, extraInfo=''):
+
+        if self.showFPS:
+            img = self.draw_info(img, self.fps, extraInfo)
+
+        cv2.imshow(self.title, img)
+        self.key = 0xFF & cv2.waitKey(1)
+        self.fps.update()
+
+    def get_key(self):
+        return self.key
+
+    def get_fps(self):
+        return self.fps
+
+    def draw_info(self, img, fps, extraInfo):
+        from common import draw_str
+        draw_str(img, (5, 30), 'fps: %s %s' % (round(fps, 2), extraInfo))
+        return img
+
+    def cleanup(self):
+        cv2.destroyAllWindows()
+
 
 if __name__ == "__main__":
     import mahotas

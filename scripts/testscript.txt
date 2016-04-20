@@ -1,0 +1,8 @@
+roslaunch turtlebot_gazebo turtlebot_world.launch
+rosrun rviz rviz -d `rospack find rbx1_nav`/sim.rviz
+python ros_video_pub.py -v -f /media/psf/Home/Dropbox/Video/my1.avi
+python cloud_trace_face_stat.py -w -t /file/video
+python keys_to_twist.py
+rqt_plot cmd_vel/linear/x cmd_vel/angular/z
+roslaunch rbx1_bringup fake_turtlebot.launch
+http://www.nownews.com/n/2015/12/27/1937292

@@ -2,6 +2,7 @@
 
 import rospy
 import sys
+import getopt
 import select
 import termios
 import tty
@@ -13,14 +14,15 @@ from geometry_msgs.msg import Twist
 
 class Keys_to_Twist:
 
-    def __init__(self):
+    def __init__(self, topic_pub='cmd_vel', topic_sub='keys'):
         self.node_name = 'keys_to_twist'
-        self.topic_pub = 'cmd_vel'
-        self.topic_sub = 'keys'
+        self.topic_pub = topic_pub
+        #self.topic_pub = 'cmd_vel_mux/input/teleop'
+        self.topic_sub = topic_sub
+        self.should_slow_down = True
         self.speed = 0.2
         self.turn = 1
         self.keys = []
-        self.settings = termios.tcgetattr(sys.stdin)
         self.moveBindings = {
             'w': (1, 0),
             'e': (1, -1),
@@ -84,13 +86,14 @@ class Keys_to_Twist:
         else:
             return ''
 
-    def monitor_keypress(self):
+    def get_keypress(self):
+        settings = termios.tcgetattr(sys.stdin)
         tty.setraw(sys.stdin.fileno())
         rlist, _, _ = select.select([sys.stdin], [], [], 0.1)
         if rlist:
             self.add_key(sys.stdin.read(1))
 
-        termios.tcsetattr(sys.stdin, termios.TCSADRAIN, self.settings)
+        termios.tcsetattr(sys.stdin, termios.TCSADRAIN, settings)
 
     def add_key(self, key):
         self.keys.append(key)
@@ -135,10 +138,10 @@ class Keys_to_Twist:
         target_turn = 0
         control_speed = 0
         control_turn = 0
-
         try:
+
             while True:
-                self.monitor_keypress()
+                self.get_keypress()
                 key = self.getKey()
                 if key in self.moveBindings.keys():
                     x = self.moveBindings[key][0]
@@ -167,18 +170,22 @@ class Keys_to_Twist:
                 target_speed = self.speed * x
                 target_turn = self.turn * th
 
-                if target_speed > control_speed:
-                    control_speed = min(target_speed, control_speed + 0.02)
-                elif target_speed < control_speed:
-                    control_speed = max(target_speed, control_speed - 0.02)
+                if self.should_slow_down:
+                    if target_speed > control_speed:
+                        control_speed = min(target_speed, control_speed + 0.02)
+                    elif target_speed < control_speed:
+                        control_speed = max(target_speed, control_speed - 0.02)
+                    else:
+                        control_speed = target_speed
+
+                    if target_turn > control_turn:
+                        control_turn = min(target_turn, control_turn + 0.1)
+                    elif target_turn < control_turn:
+                        control_turn = max(target_turn, control_turn - 0.1)
+                    else:
+                        control_turn = target_turn
                 else:
                     control_speed = target_speed
-
-                if target_turn > control_turn:
-                    control_turn = min(target_turn, control_turn + 0.1)
-                elif target_turn < control_turn:
-                    control_turn = max(target_turn, control_turn - 0.1)
-                else:
                     control_turn = target_turn
 
                 twist = Twist()
@@ -193,7 +200,6 @@ class Keys_to_Twist:
                     raise ExitLoop
                 if control_speed == 0 and control_turn == 0:
                     break
-
                 # print("loop: {0}".format(count))
                 # print("target: vx: {0}, wz: {1}".format(target_speed, target_turn))
                 # print("publihsed: vx: {0}, wz: {1}".format(twist.linear.x,
@@ -210,11 +216,32 @@ class Keys_to_Twist:
             twist.angular.y = 0
             twist.angular.z = 0
             self.pub.publish(twist)
-            termios.tcsetattr(sys.stdin, termios.TCSADRAIN, self.settings)
 
     # end def send_twist(self)
 
 if __name__ == "__main__":
+    help_msg = "%s [-p <publish topic> -s <subscribe topic>]" % (sys.argv[0])
 
-    ros_srv = Keys_to_Twist()
+    try:
+        opts, args = getopt.getopt(sys.argv[1:], 'hp:s:', '')
+    except getopt.GetoptError as err:
+        print str(err)
+        print help_msg
+        exit(1)
+
+    topic_pub = 'cmd_vel'
+    topic_sub = 'keys'
+    for key, value in opts:
+        if key == '-p':
+            topic_pub = value
+        elif key == '-s':
+            topic_sub = value
+        elif key == '-h':
+            print help_msg
+            exit(1)
+        else:
+            print help_msg
+            exit(1)
+
+    ros_srv = Keys_to_Twist(topic_pub, topic_sub)
     ros_srv.run()
