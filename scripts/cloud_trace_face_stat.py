@@ -11,7 +11,7 @@ from std_msgs.msg import String
 from cv_bridge import CvBridge, CvBridgeError
 
 
-class FaceDetection:
+class ROSFaceDetection:
 
     def __init__(self, topic, should_show_video, compute_index, total_nodes):
         self.topic_sub = topic
@@ -56,7 +56,7 @@ class FaceDetection:
         self.rects = []
         self.name_id = {}
         self.name_rect = {}
-        self.target = 'abner'  # Tzuyu
+        self.target = 'abner'  # 'abner' #'Taylor' #Tzuyu
         self.frames = []
         self.headers = []
         self.frame_max = 30
@@ -66,7 +66,7 @@ class FaceDetection:
         self.face_miss = 0
         self.frame_count = 0
         self.last_rects = []
-        self.take_last_rects = False
+        self.take_last_rects = True
         self.orignal = None
         self.detected = None
         self.sel_rect = []
@@ -275,7 +275,7 @@ class FaceDetection:
 
             face_rects.append([x1, y1, x2, y2])
 
-        return rects
+        return face_rects
     # ...
 
     def draw_rects(self, img, rects, color):
@@ -379,13 +379,24 @@ class FaceDetection:
                 self.faces = []
             else:
                 print 'no face is detected!!'
+        elif 0xFF & key == ord('a'):
+            file_name = self.save_folder + \
+                '/image_%s.jpg' % (rospy.Time.now().to_nsec())
+            if self.detected is not None:
+                cv2.imwrite(file_name, self.detected)
+                print '%s has saved.' % file_name
+            else:
+                print 'no photo can be saved!!'
 
     def handle_mouse_event(self):
         if self.orignal is None:
             return
 
         if not self.cropping:
-            clone = self.orignal.copy()
+            if len(self.sel_rect) == 0:
+                clone = self.detected.copy()
+            else:
+                clone = self.orignal.copy()
             self.show_roi(self.orignal, clone, self.sel_rect)
             cv2.imshow(self.img_title, clone)
 
@@ -474,7 +485,7 @@ if __name__ == '__main__':
             print help_msg
             exit(1)
 
-    fd = FaceDetection(topic, should_show_video,
-                       compute_index, total_nodes)
+    fd = ROSFaceDetection(topic, should_show_video,
+                          compute_index, total_nodes)
     fd.run()
     rospy.spin()
